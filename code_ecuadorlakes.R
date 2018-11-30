@@ -7,9 +7,10 @@ library(ade4) #to perfom PCA analysis
 library(ggplot2) #to make some nice ordination plots
 library(goeveg) #allow to select species for vegan ordination objects
 library(tidyverse) #allow to manipulate tabulate data
-library(spacemakeR) #allow to compute distance-based Moran eigenvectors 
+library(spacemakeR) #allow to compute distance-based Moran eigenvectors. Installed using install.packages("spacemakeR", repos="http://R-Forge.R-project.org")
 library(sp) #dependencies for spacemakeR
 library(spdep) #dependencies for spacemakeR
+library(adespatial) 
 library(scales) #allow to scale from 0 to 1 variables
 
 
@@ -42,7 +43,7 @@ env_data <- read.csv("env_data.csv", row.names = 1)
 
 #transform variables to meet assumptions of homogenity of variances
 env_transformed <- transform(env_data, Elevation=sqrt(Elevation),Cond=log10(Cond+0.25), Ca=log10(Ca+0.25), Mg=log10(Mg+0.25), K=log10(K+0.25), TP=log10(TP+0.25), TN=log10(TN+0.25), NO3=log10(NO3+0.25), SO4=log10(SO4+0.25), 
-                             MaxDepth=log10(MaxDepth+0.25), lake_area=log10(area_waterbody+0.25), MAT=log10(MAT+0.25), P.season=log10(P.season+0.25), MAP=log10(MAP+0.25), T.season=log10(T.season+0.25))
+                             MaxDepth=log10(MaxDepth+0.25), lake.area=log10(lake.area+0.25), MAT=log10(MAT+0.25), P.season=log10(P.season+0.25), MAP=log10(MAP+0.25), T.season=log10(T.season+0.25))
 
 
 #panel correlation plots to assess data distribution
@@ -70,7 +71,7 @@ pairs(env_subset, diag.panel = panel.hist, upper.panel = panel.smooth, lower.pan
 
 #Select variables with r Pearson <0.85
 env_subset<- env_transformed[, which(names(env_data) %in% c("pH", "Cond", "Secchi", "Ca", "Mg", "K", "NO3", "SO4", "TN", "TP",
-                                                            "MaxDepth", "Elevation", "lake_area",
+                                                            "MaxDepth", "Elevation", "lake.area",
                                                             "MAT", "P.season", "MAP", "T.season"))]
 
   
@@ -189,7 +190,7 @@ diat.nmds.top <- metaMDS(diatTop)
 #Extract scores from diatom downcore NMDS ordination
 diat.nmds.bottom <- metaMDS(diatBottom)
 diat.nmds.scores.fossils <- as.data.frame(scores(diat.nmds.bottom, display = "sites"))
-
+colnames(diat.nmds.scores.fossils) <- c("NMDS1.hist", "NMDS2.hist")
 
 #combine environmental, MEMs and historical variables
 explanatory <- cbind(env_subset, mems, diat.nmds.scores.fossils)
@@ -242,8 +243,13 @@ par(mar=c(2,2,1,1), mgp=c(1.2,.5,0))
   points(diat.nmds, display="sites", pch=21, col="grey", bg="grey", select=spp$time=="downcore" & spp$region=="Andes")
   points(diat.nmds, display="sites", pch=24, col="grey", bg="grey", select=spp$time=="downcore" & spp$region=="Inter Andean")
   
-  with(spp, ordiellipse(diat.nmds, spp$time, kind = "se", conf = 0.95, cex=1, col = c("black", "grey")))
+  with(spp, ordiellipse(diat.nmds, spp$time, kind = "se", conf = 0.95, cex=1, col = c("#E69F00", "grey")))
  
+  labels <- c("YAH", "YBO", "SPA", "CUN", "CUI", "LLA", "PIN", "COL", "KUY", "DCH", "HUA", "CHI", "CAR", "CUB", "EST", "YAN", "MAR", "JIG", "RIN", "FON", "PIC",
+              "YAH", "YBO", "SPA", "CUN", "CUI", "LLA", "PIN", "COL", "KUY", "DCH", "HUA", "CHI", "CAR", "CUB", "EST", "YAN", "MAR", "JIG", "RIN", "FON", "PIC")
+  text(diat.nmds, labels = labels, pos = 3, cex = 0.5, offset = 0.2)
+  
+  
   legend("bottomright",legend=c("core-top", "downcore"), pch=c(20), 
          col=c("#E69F00", "grey"), pt.bg =c("#E69F00", "grey" ), cex=0.7)
   
@@ -254,13 +260,13 @@ par(mar=c(2,2,1,1), mgp=c(1.2,.5,0))
   plot(diat.nmds, type = "n", xlim=range(scrs[,1]), ylim=range(scrs[,2]))
   
   #Plot envfit procedure
-  plot(fit, cex=0.8, p.max=0.03) #plot only statistically significant variables
+  plot(fit, cex=0.8, p.max=0.04) #plot only statistically significant variables
   
   #Plot selected species with best environmental fitting
   points(diat.nmds.top, display="species", select = selected_nmds, pch=3, col="red", cex=0.7)
   ordipointlabel(diat.nmds.top, display="species", select = selected_nmds, col="black", cex=0.6, add = TRUE)
   
-  
+
 #######################
 ### SIMPER analysis ###
 #######################
