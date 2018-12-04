@@ -367,5 +367,11 @@ for(i in which(grepl("strip-t", plot_grob$layout$name))){
 grid::grid.draw(plot_grob)
 
 # Save plots
-ggsave("plot.pdf", plot, height = 8, width = 10)
+pdf(
+  "my_plot.pdf", 
+  width = 6.5, 
+  height = 4
+)
+grid::grid.draw(plot_grob)
+dev.off()
 
