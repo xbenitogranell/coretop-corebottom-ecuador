@@ -10,8 +10,8 @@ library(tidyverse) #allow to manipulate tabulate data
 library(spacemakeR) #allow to compute distance-based Moran eigenvectors. Installed using install.packages("spacemakeR", repos="http://R-Forge.R-project.org")
 library(sp) #dependencies for spacemakeR
 library(spdep) #dependencies for spacemakeR
-library(adespatial) 
-library(scales) #allow to scale from 0 to 1 variables
+library(adespatial) #dependencies for spacemakeR
+library(scales) #allow to scale variables from 0 to 1 
 
 
 ######################################
@@ -157,11 +157,11 @@ colnames(PCA.nipals$li) <- c("Component 1", "Component 2")
 Factor.scores <- data.frame(cbind(PCA.data, PCA.nipals$li))
 
 
-#Create data frame with factor scores and regions
+#Create data frame with site scores and regions
 region <- site.time[1:21,] #lake regions of the modern diatom dataset
 PCA.scores <- data.frame(component1=Factor.scores$Component.1, component2=Factor.scores$Component.2, lakes=site.time$region)
 
-#Environmental variables
+#extract factor scores (environmental variables)
 comp1 <- as.numeric(Component.coefficient.matrix[,2])
 comp2 <- as.numeric(Component.coefficient.matrix[,3])
 
@@ -223,6 +223,11 @@ par(mar=c(2,2,1,1), mgp=c(1.2,.5,0))
   points(PCA.scores[(PCA.scores$lakes=="Andes"), 1:2], col="black", pch=21, bg="black")
   points(PCA.scores[(PCA.scores$lakes=="Inter Andean"), 1:2], col="black", pch=24, bg="black")
 
+  lakelbls <- c("YAH", "YBO", "SPA", "CUN", "CUI", "LLA", "PIN", "COL", "KUY", "DCH", "HUA", "CHI", "CAR", "CUB", "EST", "YAN", "MAR", "JIG", "RIN", "FON", "PIC",
+                    "YAH", "YBO", "SPA", "CUN", "CUI", "LLA", "PIN", "COL", "KUY", "DCH", "HUA", "CHI", "CAR", "CUB", "EST", "YAN", "MAR", "JIG", "RIN", "FON", "PIC")
+  
+  text(PCA.scores[,1:2], labels = labels_lakes, pos = 2, cex = 0.6, offset = 0.3)
+  
 #Plot environmental variables    
   
   plot(comp1, comp2, pch=1, col="black", xlab = "PCA1", ylab = "PCA2")
@@ -245,9 +250,7 @@ par(mar=c(2,2,1,1), mgp=c(1.2,.5,0))
   
   with(spp, ordiellipse(diat.nmds, spp$time, kind = "se", conf = 0.95, cex=1, col = c("#E69F00", "grey")))
  
-  labels <- c("YAH", "YBO", "SPA", "CUN", "CUI", "LLA", "PIN", "COL", "KUY", "DCH", "HUA", "CHI", "CAR", "CUB", "EST", "YAN", "MAR", "JIG", "RIN", "FON", "PIC",
-              "YAH", "YBO", "SPA", "CUN", "CUI", "LLA", "PIN", "COL", "KUY", "DCH", "HUA", "CHI", "CAR", "CUB", "EST", "YAN", "MAR", "JIG", "RIN", "FON", "PIC")
-  text(diat.nmds, labels = labels, pos = 3, cex = 0.5, offset = 0.2)
+  text(diat.nmds, labels = lakelbls, pos = 3, cex = 0.5, offset = 0.3)
   
   
   legend("bottomright",legend=c("core-top", "downcore"), pch=c(20), 
