@@ -207,6 +207,77 @@ mod.spp <- adonis2(diat ~ spp$time, method = "bray")
 mod.spp
 
 
+#######################################################
+# Redundancy Analysis (RDA) and variance partitioning #
+#######################################################
+
+df <- cbind(diat, mems, env_subset, time=spp$time)
+
+row.has.na <- apply(df, 1, function(x){any(is.na(x))})
+sum(row.has.na)
+df <- df[!row.has.na,]
+
+#separate predictor matrices
+env <- df[, names(df) %in% names(env_transformed)]
+spp <- df[, names(df) %in% names(diat)]
+time <- df[, names(df) %in% c("time")]
+time.num <- as.numeric(time)
+spatial <- df[, names(df) %in% names(mems)]
+
+
+space.time <- cbind(spatial, time.num)
+
+#rda space-time
+diat.cca1 <- rda(spp ~., data = space.time) # "~." means fit everything from the env data
+summary(diat.cca1)
+anova(diat.cca1)
+plot(diat.cca1, scaling=1)
+
+
+diat.cca2 <- ordistep(rda(spp ~ 1, data=space.time), scope=formula(diat.cca1), direction="forward", pstep=1000)
+plot(diat.cca2, scaling=1)
+
+
+#rda environmental
+rda1 <- rda(spp, env)
+
+rda1.R2a <- RsquareAdj(rda1)$adj.r.squared
+rda1.fw.env <- forward.sel(spp, env, adjR2thresh = rda1.R2a)
+
+rda1.fw.env$R2a.fullmodel <- rda1.R2a
+write.csv(rda1.fw, "rda.env.fw.csv")
+
+#rda spatial
+rda1 <- rda(spp, spatial)
+rda1.R2a <- RsquareAdj(rda1)$adj.r.squared
+rda1.fw.spatial <- forward.sel(spp, spatial, adjR2thresh = rda1.R2a)
+
+rda1.fw.spatial$R2a.fullmodel <- rda1.R2a
+write.csv(rda1.fw, "rda.spatial.fw.csv")
+
+
+
+#Extract subset of forward selected variables
+#environmental
+env.sel <- env[, which(names(env) %in% rda1.fw.env$variables)] 
+
+#spatial
+spatial.sel <- spatial[, which(names(spatial) %in% rda1.fw.spatial$variables)] 
+
+
+#Varpart
+varpart <- varpart(spp, env.sel, spatial.sel)
+varpart
+
+plot(varpart, Xnames="")
+text(locator(), c("Environmental","Spatial"), cex=1)
+
+
+#Test pure effects
+anova.cca(rda(spp, env.sel, cbind(spatial.sel)), perm.max = 999) ## test pure environmental (signif 0.05)
+anova.cca(rda(spp, spatial.sel, cbind(env.sel)), perm.max = 999) ## test pure spatial (signif 0.005)  
+
+
 ############################
 ### Plot grid PCA + NMDS ### 
 ############################
