@@ -78,7 +78,8 @@ env_subset<- env_transformed[, which(names(env_data) %in% c("pH", "Cond", "Secch
 ######################################
 #### MORAN'S Eigenvector Maps  #######
 ######################################
-#Code  adapted from Dray et al. 2012 #
+
+#### Code  from Dray et al. 2012 #####
 
 #Extract Latitude and Longitude
 xy.coord <- data.frame(env_data$Lat, env_data$Long)
@@ -193,7 +194,7 @@ diat.nmds.scores.fossils <- as.data.frame(scores(diat.nmds.bottom, display = "si
 colnames(diat.nmds.scores.fossils) <- c("NMDS1.hist", "NMDS2.hist")
 
 #combine environmental, MEMs and historical variables
-explanatory <- cbind(env_subset, mems, diat.nmds.scores.fossils)
+explanatory <- cbind(env_subset, mems)
 fit <- envfit(diat.nmds.top, explanatory, na.rm=TRUE, permutations = 999) 
 fit
 
@@ -211,41 +212,28 @@ mod.spp
 # Redundancy Analysis (RDA) and variance partitioning #
 #######################################################
 
-df <- cbind(diat, mems, env_subset, time=spp$time)
+#merge datasets
+df <- cbind(diatTop, mems, env_subset, diat.nmds.scores.fossils)
 
+#remove rows with missing values
 row.has.na <- apply(df, 1, function(x){any(is.na(x))})
 sum(row.has.na)
 df <- df[!row.has.na,]
 
 #separate predictor matrices
-env <- df[, names(df) %in% names(env_transformed)]
-spp <- df[, names(df) %in% names(diat)]
-time <- df[, names(df) %in% c("time")]
-time.num <- as.numeric(time)
-spatial <- df[, names(df) %in% names(mems)]
-
-
-space.time <- cbind(spatial, time.num)
-
-#rda space-time
-diat.cca1 <- rda(spp ~., data = space.time) # "~." means fit everything from the env data
-summary(diat.cca1)
-anova(diat.cca1)
-plot(diat.cca1, scaling=1)
-
-
-diat.cca2 <- ordistep(rda(spp ~ 1, data=space.time), scope=formula(diat.cca1), direction="forward", pstep=1000)
-plot(diat.cca2, scaling=1)
+spp <- df2[, names(df2) %in% names(diatTop)]
+env <- df2[, names(df2) %in% names(env_subset)]
+spatial <- df2[, names(df2) %in% names(data.frame(mems))]
+hist <- df2[, names(df2) %in% names(diat.nmds.scores.fossils)]
 
 
 #rda environmental
 rda1 <- rda(spp, env)
-
 rda1.R2a <- RsquareAdj(rda1)$adj.r.squared
 rda1.fw.env <- forward.sel(spp, env, adjR2thresh = rda1.R2a)
 
 rda1.fw.env$R2a.fullmodel <- rda1.R2a
-write.csv(rda1.fw, "rda.env.fw.csv")
+write.csv(rda1.fw.env, "rda.env.fw.csv")
 
 #rda spatial
 rda1 <- rda(spp, spatial)
@@ -253,8 +241,15 @@ rda1.R2a <- RsquareAdj(rda1)$adj.r.squared
 rda1.fw.spatial <- forward.sel(spp, spatial, adjR2thresh = rda1.R2a)
 
 rda1.fw.spatial$R2a.fullmodel <- rda1.R2a
-write.csv(rda1.fw, "rda.spatial.fw.csv")
+write.csv(rda1.fw.spatial, "rda.spatial.fw.csv")
 
+#rda historical
+rda1 <- rda(spp, hist)
+rda1.R2a <- RsquareAdj(rda1)$adj.r.squared
+rda1.fw.historical <- forward.sel(spp, hist, adjR2thresh = rda1.R2a)
+
+rda1.fw.historical$R2a.fullmodel <- rda1.R2a
+write.csv(rda1.fw.historical, "rda.hist.fw.csv")
 
 
 #Extract subset of forward selected variables
@@ -264,18 +259,21 @@ env.sel <- env[, which(names(env) %in% rda1.fw.env$variables)]
 #spatial
 spatial.sel <- spatial[, which(names(spatial) %in% rda1.fw.spatial$variables)] 
 
+#historical
+hist.sel <- hist[, which(names(hist) %in% rda1.fw.historical$variables)] 
+
 
 #Varpart
-varpart <- varpart(spp, env.sel, spatial.sel)
-varpart
+varpart <- varpart(spp, env.sel, spatial.sel, hist.sel)
 
 plot(varpart, Xnames="")
 text(locator(), c("Environmental","Spatial"), cex=1)
 
 
 #Test pure effects
-anova.cca(rda(spp, env.sel, cbind(spatial.sel)), perm.max = 999) ## test pure environmental (signif 0.05)
-anova.cca(rda(spp, spatial.sel, cbind(env.sel)), perm.max = 999) ## test pure spatial (signif 0.005)  
+anova.cca(rda(spp, env.sel, cbind(spatial.sel, hist.sel)), perm.max = 999) ## test pure environmental (signif 0.05)
+anova.cca(rda(spp, spatial.sel, cbind(env.sel, hist.sel)), perm.max = 999) ## test pure spatial (signif 0.005)  
+anova.cca(rda(spp, hist.sel, cbind(env.sel, spatial.sel)), perm.max = 999) ## test pure spatial (signif 0.005)  
 
 
 ############################
@@ -297,7 +295,7 @@ par(mar=c(2,2,1,1), mgp=c(1.2,.5,0))
   lakelbls <- c("YAH", "YBO", "SPA", "CUN", "CUI", "LLA", "PIN", "COL", "KUY", "DCH", "HUA", "CHI", "CAR", "CUB", "EST", "YAN", "MAR", "JIG", "RIN", "FON", "PIC",
                     "YAH", "YBO", "SPA", "CUN", "CUI", "LLA", "PIN", "COL", "KUY", "DCH", "HUA", "CHI", "CAR", "CUB", "EST", "YAN", "MAR", "JIG", "RIN", "FON", "PIC")
   
-  text(PCA.scores[,1:2], labels = labels_lakes, pos = 2, cex = 0.6, offset = 0.3)
+  text(PCA.scores[,1:2], labels = lakelbls, pos = 2, cex = 0.9, offset = 0.3)
   
 #Plot environmental variables    
   
@@ -307,7 +305,7 @@ par(mar=c(2,2,1,1), mgp=c(1.2,.5,0))
   
   #Labels
   labels <- as.character(Component.coefficient.matrix[,1])
-  text(comp1, comp2, labels = labels, pos = 1, cex = 0.6, offset = 0.2)
+  text(comp1, comp2, labels = labels, pos = 1, cex = 0.9, offset = 0.3)
   
 #Plot NMDS
   scrs <- scores(diat.nmds, display = "sites", choices = 1:2)
@@ -321,7 +319,7 @@ par(mar=c(2,2,1,1), mgp=c(1.2,.5,0))
   
   with(spp, ordiellipse(diat.nmds, spp$time, kind = "se", conf = 0.95, cex=1, col = c("#E69F00", "grey")))
  
-  text(diat.nmds, labels = lakelbls, pos = 3, cex = 0.5, offset = 0.3)
+  text(diat.nmds, labels = lakelbls, pos = 3, cex = 0.8, offset = 0.3)
   
   
   legend("bottomright",legend=c("core-top", "downcore"), pch=c(20), 
@@ -439,13 +437,4 @@ for(i in which(grepl("strip-t", plot_grob$layout$name))){
 
 # needed to draw the modified plot_grob
 grid::grid.draw(plot_grob)
-
-# Save plots
-pdf(
-  "my_plot.pdf", 
-  width = 6.5, 
-  height = 4
-)
-grid::grid.draw(plot_grob)
-dev.off()
 
