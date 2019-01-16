@@ -69,6 +69,14 @@ panel.cor <- function(x, y, digits = 2, prefix = "", cex.cor, ...) {
 #Figure S1 of the manuscript
 pairs(env_subset, diag.panel = panel.hist, upper.panel = panel.smooth, lower.panel = panel.cor, gap = 0, cex.labels = 1, cex=1.5, font.labels = 1) 
 
+# Table S3 of the manuscript
+cor <- corr.test(env_subset, method = "spearman")
+
+  #export correlation p values
+  cor.table <- cor$r
+  write.csv(cor.table, "cor.r.csv")
+  
+
 #Select variables with r Pearson <0.85
 env_subset<- env_transformed[, which(names(env_data) %in% c("pH", "Cond", "Secchi", "Ca", "Mg", "K", "NO3", "SO4", "TN", "TP",
                                                             "MaxDepth", "Elevation", "lake.area",
@@ -221,13 +229,39 @@ sum(row.has.na)
 df <- df[!row.has.na,]
 
 #separate predictor matrices
-spp <- df2[, names(df2) %in% names(diatTop)]
-env <- df2[, names(df2) %in% names(env_subset)]
-spatial <- df2[, names(df2) %in% names(data.frame(mems))]
-hist <- df2[, names(df2) %in% names(diat.nmds.scores.fossils)]
+site.time.region <- df[, names(df) %in% c("site", "time", "region")]
+df <- df[,!(names(df) %in% c("site", "region", "time"))]
+
+spp <- df[, names(df) %in% names(diatTop)]
+env <- df[, names(df) %in% names(env_subset)]
+spatial <- df[, names(df) %in% names(data.frame(mems))]
+hist <- df[, names(df) %in% names(diat.nmds.scores.fossils)]
 
 
-#rda environmental
+#Full RDA
+pred <- cbind(env, spatial, hist)
+mod1 <- rda(spp ~ ., data=pred)
+
+#extract sit scores for plotting
+scrs <- mod1$CCA$wa[,1:2]
+scrs.region <- data.frame(rda.1=scrs[,1], rda.2=scrs[,2], region=site.time.region$region)
+attach(scrs.region)
+
+#plot 
+#Figure S1 of the manuscript
+plot(mod1, type="n", xlab="RDA1 (22.2%)", ylab="RDA2 (10.1%)")
+points(scrs.region[(scrs.region$region == "Andes") , 1:2], col="black", pch=21, bg="black")
+points(scrs.region[(scrs.region$region == "Inter Andean") , 1:2], col="black", pch=24, bg="black")
+
+text(mod1, dis="bp", col="grey")
+
+labels <- c("YAH", "YBO", "SPA", "CUN", "CUI", "LLA", "COL", "DCH", "HUA", "CHI", "CAR", "CUB", "EST", "YAN", "MAR", "JIG", "RIN", "FON", "PIC")
+text(scrs.region[,1:2], labels = labels, pos = 2, cex = 0.8, offset = 0.3)
+
+legend("bottomleft", legend=c("High-elevation Andes", "Inter Andean plateau"), pch=c(21,24), col = "black", cex=0.9)
+
+
+#RDA environmental
 rda1 <- rda(spp, env)
 rda1.R2a <- RsquareAdj(rda1)$adj.r.squared
 rda1.fw.env <- forward.sel(spp, env, adjR2thresh = rda1.R2a)
@@ -235,7 +269,7 @@ rda1.fw.env <- forward.sel(spp, env, adjR2thresh = rda1.R2a)
 rda1.fw.env$R2a.fullmodel <- rda1.R2a
 write.csv(rda1.fw.env, "rda.env.fw.csv")
 
-#rda spatial
+#RDA spatial
 rda1 <- rda(spp, spatial)
 rda1.R2a <- RsquareAdj(rda1)$adj.r.squared
 rda1.fw.spatial <- forward.sel(spp, spatial, adjR2thresh = rda1.R2a)
@@ -243,7 +277,7 @@ rda1.fw.spatial <- forward.sel(spp, spatial, adjR2thresh = rda1.R2a)
 rda1.fw.spatial$R2a.fullmodel <- rda1.R2a
 write.csv(rda1.fw.spatial, "rda.spatial.fw.csv")
 
-#rda historical
+#RDA historical
 rda1 <- rda(spp, hist)
 rda1.R2a <- RsquareAdj(rda1)$adj.r.squared
 rda1.fw.historical <- forward.sel(spp, hist, adjR2thresh = rda1.R2a)
@@ -267,7 +301,7 @@ hist.sel <- hist[, which(names(hist) %in% rda1.fw.historical$variables)]
 varpart <- varpart(spp, env.sel, spatial.sel, hist.sel)
 
 plot(varpart, Xnames="")
-text(locator(), c("Environmental","Spatial"), cex=1)
+text(locator(), c("Environmental","Spatial", "Historical"), cex=1)
 
 
 #Test pure effects
