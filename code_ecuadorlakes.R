@@ -39,7 +39,7 @@ diat <- diatoms[,4:ncol(diatoms)]
 
 
 #Environmental and climatic data
-env_data <- read.csv("env_data.csv", row.names = 1)
+env_data <- read.csv("environmental_data.csv", row.names = 1)
 
 #transform variables to meet assumptions of homogenity of variances
 env_transformed <- transform(env_data, Elevation=sqrt(Elevation),Cond=log10(Cond+0.25), Ca=log10(Ca+0.25), Mg=log10(Mg+0.25), K=log10(K+0.25), TP=log10(TP+0.25), TN=log10(TN+0.25), NO3=log10(NO3+0.25), SO4=log10(SO4+0.25), 
@@ -327,7 +327,7 @@ par(mar=c(2,2,1,1), mgp=c(1.2,.5,0))
   points(PCA.scores[(PCA.scores$lakes=="Inter Andean"), 1:2], col="black", pch=24, bg="black")
 
   lakelbls <- c("YAH", "YBO", "SPA", "CUN", "CUI", "LLA", "PIN", "COL", "KUY", "DCH", "HUA", "CHI", "CAR", "CUB", "EST", "YAN", "MAR", "JIG", "RIN", "FON", "PIC",
-                    "YAH", "YBO", "SPA", "CUN", "CUI", "LLA", "PIN", "COL", "KUY", "DCH", "HUA", "CHI", "CAR", "CUB", "EST", "YAN", "MAR", "JIG", "RIN", "FON", "PIC")
+                    "YAH", "YBO", "SPA", "CUN", "CUI", "COL", "LLA", "PIN", "KUY", "DCH", "HUA", "CHI", "CAR", "CUB", "EST", "YAN", "MAR", "JIG", "RIN", "FON", "PIC")
   
   text(PCA.scores[,1:2], labels = lakelbls, pos = 2, cex = 0.9, offset = 0.3)
   
