@@ -6,7 +6,8 @@ library(vegan) #to perform nonmetric multidimensional analysis, simper and adoni
 library(ade4) #to perfom PCA analysis
 library(ggplot2) #to make nice ordination plots
 library(cowplot) #to plot differents ggplots objects in the same grid
-library(ggrepel)
+library(ggrepel) #
+library(ggpubr) #to draw ellipses
 library(goeveg) #allow to select species for vegan ordination objects
 library(tidyverse) #allow to manipulate tabulate data
 library(spacemakeR) #allow to compute distance-based Moran eigenvectors. Installed using install.packages("spacemakeR", repos="http://R-Forge.R-project.org")
@@ -205,6 +206,7 @@ colnames(diat.nmds.scores.fossils) <- c("NMDS1.hist", "NMDS2.hist")
 
 #combine environmental, MEMs and historical variables
 explanatory <- cbind(env_subset, mems)
+explanatory <- cbind(env_subset)
 fit <- envfit(diat.nmds.top, explanatory, na.rm=TRUE, permutations = 999) 
 fit
 
@@ -212,6 +214,16 @@ fit
 #Select the 20% most abundant species with 70% best environmental fit in NDMS for axes 1 & 2
 selected_nmds <- ordiselect(diatTop, diat.nmds.top,  ablim = 0.2, fitlim = 0.7, method = "axes", env = fit)  
 
+#Extract NMDS species scores
+scrs.spp <- data.frame(scores(diat.nmds, display = "species", choices = 1:2))
+
+#Select NMDS species scores from the ordiselect
+selected_spp_scrs <- scrs.spp[row.names(scrs.spp) %in% selected_nmds, ]
+
+#transform species character vector to numeric vector
+selected_nmds <- as.factor(selected_nmds)
+levels(selected_nmds) <- 1:length(levels(selected_nmds))
+selected_nmds <- as.numeric(selected_nmds)
 
 ## Multivariate homogenity of group dispersions
 mod.spp <- adonis2(diat ~ spp$time, method = "bray")
@@ -320,42 +332,29 @@ anova.cca(rda(spp, hist.sel, cbind(env.sel, spatial.sel)), perm.max = 999) ## te
 par(mfrow=c(2,2))
 par(mar=c(2,2,1,1), mgp=c(1.2,.5,0))
 
-#Plot PCA site labels (=lakes)
-  plot(PCA.scores$component1, PCA.scores$component2, type = "n", xlab = "PCA1", ylab = "PCA2")
-  abline(h=0, col="grey")
-  abline(v=0, col="grey")
   
-  points(PCA.scores[(PCA.scores$lakes=="Andes"), 1:2], col="black", pch=21, bg="black")
-  points(PCA.scores[(PCA.scores$lakes=="Inter Andean"), 1:2], col="black", pch=24, bg="black")
-
-  
-  
+#create vector of lake names to plot
   lakelbls <- c("YAH", "YBO", "SPA", "CUN", "CUI", "LLA", "PIN", "COL", "KUY", "DCH", "HUA", "CHI", "CAR", "CUB", "EST", "YAN", "MAR", "JIG", "RIN", "FON", "PIC")
   
-  
-  
-  text(PCA.scores[,1:2], labels = lakelbls, pos = 2, cex = 0.9, offset = 0.3)
-  
-  
-  
-  #using ggplot
+
+#Plot PCA site labels (=lakes)
   pca_plt <- ggplot(PCA.scores, aes(component1,component2, label=lakelbls)) + 
     xlab("PCA1") + ylab("PCA2") +
+    coord_fixed() +
     geom_point() +
     geom_text_repel() +
     geom_vline(aes(xintercept = 0), linetype = "solid", colour="grey") +
     geom_hline(aes(yintercept = 0), linetype = "solid", colour="grey") +
     theme_classic()
-  
 
   
-  
-#Plot environmental variables    
+#Plot PCA species (=environmental variables)  
   
   variables_tbl <- mutate(data.frame(cbind(comp1, comp2)), varlbls = as.character(Component.coefficient.matrix[,1]))
   
-  variables_plt <- ggplot(variables_tbl, aes(comp1,comp2, label=varlbls)) + 
+  pca_variables_plt <- ggplot(variables_tbl, aes(comp1,comp2, label=varlbls)) + 
     xlab("PCA1") + ylab("PCA2") +
+    #coord_fixed() +
     geom_point() +
     geom_text_repel() +
     geom_segment(data=variables_tbl, aes(x = 0, y = 0, xend = comp1*0.9, yend = comp2*0.9), arrow = arrow(length = unit(1/2, 'picas')), color = "grey30") +
@@ -363,78 +362,65 @@ par(mar=c(2,2,1,1), mgp=c(1.2,.5,0))
     geom_hline(aes(yintercept = 0), linetype = "solid", colour="grey") +
     theme_classic()
   
-  
-  plot(comp1, comp2, pch=1, col="black", xlab = "PCA1", ylab = "PCA2")
-  abline(h=0, col="grey")
-  abline(v=0, col="grey")
-  
-  #Labels
-  labels <- as.character(Component.coefficient.matrix[,1])
-  text(comp1, comp2, labels = labels, pos = 1, cex = 0.9, offset = 0.3)
-  
-  
-  #cowplot's plot.grid function
-  plot_grid(pca_plt, variables_plt, ncol = 2, align = "hv", axis = "lrtb",labels=c("a","b"))
-  
-  
  
   
-  
 #Plot NMDS
+  
+  #Extract NMDS site scores
   scrs <- scores(diat.nmds, display = "sites", choices = 1:2)
   
+  ##create vector of lake names to plot (topcore + downcore samples)
   lakelbls_nmds <- c("YAH", "YBO", "SPA", "CUN", "CUI", "LLA", "PIN", "COL", "KUY", "DCH", "HUA", "CHI", "CAR", "CUB", "EST", "YAN", "MAR", "JIG", "RIN", "FON", "PIC",
                 "YAH", "YBO", "SPA", "CUN", "CUI", "COL", "LLA", "PIN", "KUY", "DCH", "HUA", "CHI", "CAR", "CUB", "EST", "YAN", "MAR", "JIG", "RIN", "FON", "PIC")
   
   
   nmds_tbl <- mutate(data.frame(scrs), labels = lakelbls_nmds, time=spp$time, region=spp$region)
   
-  
   nmds_plt <- ggplot(nmds_tbl, aes(NMDS1,NMDS2, label=labels, colour=time)) + 
     xlab("NMDS1") + ylab("NMDS2") +
+    #coord_fixed() +
     geom_point(aes(shape = region), size=3) +
     stat_conf_ellipse(aes(x=NMDS1, y=NMDS2, color=time, type="norm")) +
     scale_colour_manual(values=c("#E69F00", "#999999")) +
-    geom_text_repel(colour="black") +
+    geom_text_repel(colour="black", size=3) +
     geom_vline(aes(xintercept = 0), linetype = "solid", colour="grey") +
     geom_hline(aes(yintercept = 0), linetype = "solid", colour="grey") +
     theme_classic()
+  
+
+
+#Plot Environmental fitting
+  
+  spp.scrs <- as.data.frame(scores(fit, display = "vectors"))
+  spp.scrs <- cbind(spp.scrs, Species = rownames(spp.scrs))
+  
+  envfit_plt <- ggplot(data.frame(scrs)) +
+    xlab("NMDS1") + ylab("NMDS2") +
+    geom_point(data = selected_spp_scrs, aes(x=NMDS1, y=NMDS2)) +
+    geom_text_repel(data=selected_spp_scrs, aes(x=NMDS1, y=NMDS2, label=selected_nmds), colour="red") +
+    geom_vline(aes(xintercept = 0), linetype = "solid", colour="grey") +
+    geom_hline(aes(yintercept = 0), linetype = "solid", colour="grey") +
+    #coord_fixed() + ## need aspect ratio of 1!
+    geom_segment(data = spp.scrs,
+                 aes(x = 0, xend = NMDS1*0.9, y = 0, yend = NMDS2*0.9),
+                 arrow = arrow(length = unit(0.25, "cm")), colour = "blue") +
+    geom_text(data = spp.scrs, aes(x = NMDS1, y = NMDS2, label = Species),
+              size = 3) +
+    theme_classic()
+  
+
+
+#cowplot's plot.grid function
+  final_plt <- plot_grid(pca_plt, pca_variables_plt, nmds_plt, envfit_plt, 
+            nrow=2, axis = "rlbt",
+            labels=c("a","b","c","d")) +
+            theme(plot.margin = unit(c(0,0,0,0), "cm")) +
+            theme(legend.title=element_blank())
+  
+  final_plt
+                  
+                  
  
-  nmds_plt
- 
- 
-  
-  
-  
-  plot(diat.nmds, type = "n", xlim=range(scrs[,1]), ylim=range(scrs[,2]))
-  
-  points(diat.nmds, display="sites", pch=21, col="#E69F00", bg="#E69F00", select=spp$time =="core top" & spp$region=="Andes")
-  points(diat.nmds, display="sites", pch=24, col="#E69F00", bg="#E69F00", select=spp$time =="core top" & spp$region=="Inter Andean")
-  
-  points(diat.nmds, display="sites", pch=21, col="grey", bg="grey", select=spp$time=="downcore" & spp$region=="Andes")
-  points(diat.nmds, display="sites", pch=24, col="grey", bg="grey", select=spp$time=="downcore" & spp$region=="Inter Andean")
-  
-  with(spp, ordiellipse(diat.nmds, spp$time, kind = "se", conf = 0.95, cex=1, col = c("#E69F00", "grey")))
- 
-  text(diat.nmds, labels = lakelbls, pos = 3, cex = 0.8, offset = 0.3)
-  
-  
-  legend("bottomright",legend=c("core-top", "downcore"), pch=c(20), 
-         col=c("#E69F00", "grey"), pt.bg =c("#E69F00", "grey" ), cex=0.7)
-  
-  legend("bottomleft", legend=c("High-elevation Andes", "Inter Andean plateau"), pch=c(21,24), cex=0.7)
-  
-  
-#Plot species labels
-  plot(diat.nmds, type = "n", xlim=range(scrs[,1]), ylim=range(scrs[,2]))
-  
-  #Plot envfit procedure
-  plot(fit, cex=0.8, p.max=0.04) #plot only statistically significant variables
-  
-  #Plot selected species with best environmental fitting
-  points(diat.nmds.top, display="species", select = selected_nmds, pch=3, col="red", cex=0.7)
-  ordipointlabel(diat.nmds.top, display="species", select = selected_nmds, col="black", cex=0.6, add = TRUE)
-  
 
 #######################
 ### SIMPER analysis ###
