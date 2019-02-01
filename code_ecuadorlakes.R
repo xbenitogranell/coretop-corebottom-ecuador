@@ -4,7 +4,9 @@ getwd("~/myfolder")
 ##loading libraries for functions used
 library(vegan) #to perform nonmetric multidimensional analysis, simper and adonis2 
 library(ade4) #to perfom PCA analysis
-library(ggplot2) #to make some nice ordination plots
+library(ggplot2) #to make nice ordination plots
+library(cowplot) #to plot differents ggplots objects in the same grid
+library(ggrepel)
 library(goeveg) #allow to select species for vegan ordination objects
 library(tidyverse) #allow to manipulate tabulate data
 library(spacemakeR) #allow to compute distance-based Moran eigenvectors. Installed using install.packages("spacemakeR", repos="http://R-Forge.R-project.org")
@@ -168,7 +170,7 @@ Factor.scores <- data.frame(cbind(PCA.data, PCA.nipals$li))
 
 #Create data frame with site scores and regions
 region <- site.time[1:21,] #lake regions of the modern diatom dataset
-PCA.scores <- data.frame(component1=Factor.scores$Component.1, component2=Factor.scores$Component.2, lakes=site.time$region)
+PCA.scores <- data.frame(component1=Factor.scores$Component.1, component2=Factor.scores$Component.2, lakes=site.time[1:21,]$region)
 
 #extract factor scores (environmental variables)
 comp1 <- as.numeric(Component.coefficient.matrix[,2])
@@ -326,12 +328,41 @@ par(mar=c(2,2,1,1), mgp=c(1.2,.5,0))
   points(PCA.scores[(PCA.scores$lakes=="Andes"), 1:2], col="black", pch=21, bg="black")
   points(PCA.scores[(PCA.scores$lakes=="Inter Andean"), 1:2], col="black", pch=24, bg="black")
 
-  lakelbls <- c("YAH", "YBO", "SPA", "CUN", "CUI", "LLA", "PIN", "COL", "KUY", "DCH", "HUA", "CHI", "CAR", "CUB", "EST", "YAN", "MAR", "JIG", "RIN", "FON", "PIC",
-                    "YAH", "YBO", "SPA", "CUN", "CUI", "COL", "LLA", "PIN", "KUY", "DCH", "HUA", "CHI", "CAR", "CUB", "EST", "YAN", "MAR", "JIG", "RIN", "FON", "PIC")
+  
+  
+  lakelbls <- c("YAH", "YBO", "SPA", "CUN", "CUI", "LLA", "PIN", "COL", "KUY", "DCH", "HUA", "CHI", "CAR", "CUB", "EST", "YAN", "MAR", "JIG", "RIN", "FON", "PIC")
+  
+  
   
   text(PCA.scores[,1:2], labels = lakelbls, pos = 2, cex = 0.9, offset = 0.3)
   
+  
+  
+  #using ggplot
+  pca_plt <- ggplot(PCA.scores, aes(component1,component2, label=lakelbls)) + 
+    xlab("PCA1") + ylab("PCA2") +
+    geom_point() +
+    geom_text_repel() +
+    geom_vline(aes(xintercept = 0), linetype = "solid", colour="grey") +
+    geom_hline(aes(yintercept = 0), linetype = "solid", colour="grey") +
+    theme_classic()
+  
+
+  
+  
 #Plot environmental variables    
+  
+  variables_tbl <- mutate(data.frame(cbind(comp1, comp2)), varlbls = as.character(Component.coefficient.matrix[,1]))
+  
+  variables_plt <- ggplot(variables_tbl, aes(comp1,comp2, label=varlbls)) + 
+    xlab("PCA1") + ylab("PCA2") +
+    geom_point() +
+    geom_text_repel() +
+    geom_segment(data=variables_tbl, aes(x = 0, y = 0, xend = comp1*0.9, yend = comp2*0.9), arrow = arrow(length = unit(1/2, 'picas')), color = "grey30") +
+    geom_vline(aes(xintercept = 0), linetype = "solid", colour="grey") +
+    geom_hline(aes(yintercept = 0), linetype = "solid", colour="grey") +
+    theme_classic()
+  
   
   plot(comp1, comp2, pch=1, col="black", xlab = "PCA1", ylab = "PCA2")
   abline(h=0, col="grey")
@@ -341,8 +372,40 @@ par(mar=c(2,2,1,1), mgp=c(1.2,.5,0))
   labels <- as.character(Component.coefficient.matrix[,1])
   text(comp1, comp2, labels = labels, pos = 1, cex = 0.9, offset = 0.3)
   
+  
+  #cowplot's plot.grid function
+  plot_grid(pca_plt, variables_plt, ncol = 2, align = "hv", axis = "lrtb",labels=c("a","b"))
+  
+  
+ 
+  
+  
 #Plot NMDS
   scrs <- scores(diat.nmds, display = "sites", choices = 1:2)
+  
+  lakelbls_nmds <- c("YAH", "YBO", "SPA", "CUN", "CUI", "LLA", "PIN", "COL", "KUY", "DCH", "HUA", "CHI", "CAR", "CUB", "EST", "YAN", "MAR", "JIG", "RIN", "FON", "PIC",
+                "YAH", "YBO", "SPA", "CUN", "CUI", "COL", "LLA", "PIN", "KUY", "DCH", "HUA", "CHI", "CAR", "CUB", "EST", "YAN", "MAR", "JIG", "RIN", "FON", "PIC")
+  
+  
+  nmds_tbl <- mutate(data.frame(scrs), labels = lakelbls_nmds, time=spp$time, region=spp$region)
+  
+  
+  nmds_plt <- ggplot(nmds_tbl, aes(NMDS1,NMDS2, label=labels, colour=time)) + 
+    xlab("NMDS1") + ylab("NMDS2") +
+    geom_point(aes(shape = region), size=3) +
+    stat_conf_ellipse(aes(x=NMDS1, y=NMDS2, color=time, type="norm")) +
+    scale_colour_manual(values=c("#E69F00", "#999999")) +
+    geom_text_repel(colour="black") +
+    geom_vline(aes(xintercept = 0), linetype = "solid", colour="grey") +
+    geom_hline(aes(yintercept = 0), linetype = "solid", colour="grey") +
+    theme_classic()
+ 
+  nmds_plt
+ 
+ 
+  
+  
+  
   plot(diat.nmds, type = "n", xlim=range(scrs[,1]), ylim=range(scrs[,2]))
   
   points(diat.nmds, display="sites", pch=21, col="#E69F00", bg="#E69F00", select=spp$time =="core top" & spp$region=="Andes")
