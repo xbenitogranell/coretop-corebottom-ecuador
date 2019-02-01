@@ -418,6 +418,8 @@ par(mar=c(2,2,1,1), mgp=c(1.2,.5,0))
             theme(legend.title=element_blank())
   
   final_plt
+  ggsave("diatom-gamls-model-fits-composite.pdf", plotAll, height = 8, width = 10)
+  
                   
                   
  
