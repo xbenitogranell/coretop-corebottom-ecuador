@@ -45,7 +45,7 @@ diat <- diatoms[,4:ncol(diatoms)]
 env_data <- read.csv("environmental_data.csv", row.names = 1)
 
 #transform variables to meet assumptions of homogenity of variances
-env_transformed <- transform(env_data, Elevation=sqrt(Elevation),Cond=log10(Cond+0.25), Ca=log10(Ca+0.25), Mg=log10(Mg+0.25), K=log10(K+0.25), TP=log10(TP+0.25), TN=log10(TN+0.25), NO3=log10(NO3+0.25), SO4=log10(SO4+0.25), 
+env_transformed <- transform(env_data, WaterT=log10(WaterT+0.25), Elevation=sqrt(Elevation),Cond=log10(Cond+0.25), Ca=log10(Ca+0.25), Mg=log10(Mg+0.25), K=log10(K+0.25), TP=log10(TP+0.25), TN=log10(TN+0.25), NO3=log10(NO3+0.25), SO4=log10(SO4+0.25), 
                              MaxDepth=log10(MaxDepth+0.25), lake.area=log10(lake.area+0.25), MAT=log10(MAT+0.25), P.season=log10(P.season+0.25), MAP=log10(MAP+0.25), T.season=log10(T.season+0.25))
 
 
@@ -81,9 +81,9 @@ cor <- corr.test(env_subset, method = "spearman")
   
 
 #Select variables with r Pearson <0.85
-env_subset<- env_transformed[, which(names(env_data) %in% c("pH", "Cond", "Secchi", "Ca", "Mg", "K", "NO3", "SO4", "TN", "TP",
+env_subset<- env_transformed[, which(names(env_data) %in% c("WaterT", "pH", "Cond", "Secchi", "Ca", "Mg", "K", "NO3", "SO4", "TN", "TP",
                                                             "MaxDepth", "Elevation", "lake.area",
-                                                            "MAT", "P.season", "MAP", "T.season"))]
+                                                             "P.season", "MAP", "T.season"))]
 
   
 ######################################
@@ -171,7 +171,7 @@ Factor.scores <- data.frame(cbind(PCA.data, PCA.nipals$li))
 
 #Create data frame with site scores and regions
 region <- site.time[1:21,] #lake regions of the modern diatom dataset
-PCA.scores <- data.frame(component1=Factor.scores$Component.1, component2=Factor.scores$Component.2, lakes=site.time[1:21,]$region)
+PCA.scores <- data.frame(component1=Factor.scores$Component.1, component2=Factor.scores$Component.2)
 
 #extract factor scores (environmental variables)
 comp1 <- as.numeric(Component.coefficient.matrix[,2])
@@ -191,6 +191,8 @@ diatTop <- subset(spp, time=="core top")
 diatBottom <- subset(spp, time=="downcore")
 
 diatTop <- diatTop[,!(names(diatTop) %in% c("site", "region", "time"))]
+groups_rda <- diatTop[,(names(diatTop) %in% c("site", "region", "time"))]
+
 diatTop<- decostand(diatTop, method = "hellinger")
 
 diatBottom <- diatBottom[,!(names(diatBottom) %in% c("site", "region", "time"))]
@@ -206,9 +208,7 @@ colnames(diat.nmds.scores.fossils) <- c("NMDS1.hist", "NMDS2.hist")
 
 #combine environmental, MEMs and historical variables
 explanatory <- cbind(env_subset, mems)
-explanatory <- cbind(env_subset)
 fit <- envfit(diat.nmds.top, explanatory, na.rm=TRUE, permutations = 999) 
-fit
 
 
 #Select the 20% most abundant species with 70% best environmental fit in NDMS for axes 1 & 2
@@ -235,7 +235,7 @@ mod.spp
 #######################################################
 
 #merge datasets
-df <- cbind(diatTop, mems, env_subset, diat.nmds.scores.fossils)
+df <- cbind(diatTop, mems, env_subset, diat.nmds.scores.fossils, groups_rda)
 
 #remove rows with missing values
 row.has.na <- apply(df, 1, function(x){any(is.na(x))})
@@ -328,21 +328,17 @@ anova.cca(rda(spp, hist.sel, cbind(env.sel, spatial.sel)), perm.max = 999) ## te
 ### Plot grid PCA + NMDS ### 
 ############################
 #Figure 2 of the manuscript#
-
-par(mfrow=c(2,2))
-par(mar=c(2,2,1,1), mgp=c(1.2,.5,0))
-
   
 #create vector of lake names to plot
   lakelbls <- c("YAH", "YBO", "SPA", "CUN", "CUI", "LLA", "PIN", "COL", "KUY", "DCH", "HUA", "CHI", "CAR", "CUB", "EST", "YAN", "MAR", "JIG", "RIN", "FON", "PIC")
-  
+  pca_tbl <- mutate(data.frame(PCA.scores), labels = lakelbls, region=site.time[1:21,]$region)
 
 #Plot PCA site labels (=lakes)
-  pca_plt <- ggplot(PCA.scores, aes(component1,component2, label=lakelbls)) + 
+  pca_plt <- ggplot(pca_tbl, aes(component1,component2, label=labels)) + 
     xlab("PCA1") + ylab("PCA2") +
     coord_fixed() +
-    geom_point() +
-    geom_text_repel() +
+    geom_point(aes(shape = region), size=3, show.legend = FALSE) +
+    geom_text_repel(colour="black", size=3) +
     geom_vline(aes(xintercept = 0), linetype = "solid", colour="grey") +
     geom_hline(aes(yintercept = 0), linetype = "solid", colour="grey") +
     theme_classic()
@@ -354,9 +350,8 @@ par(mar=c(2,2,1,1), mgp=c(1.2,.5,0))
   
   pca_variables_plt <- ggplot(variables_tbl, aes(comp1,comp2, label=varlbls)) + 
     xlab("PCA1") + ylab("PCA2") +
-    #coord_fixed() +
     geom_point() +
-    geom_text_repel() +
+    geom_text_repel(colour="black", size=3) +
     geom_segment(data=variables_tbl, aes(x = 0, y = 0, xend = comp1*0.9, yend = comp2*0.9), arrow = arrow(length = unit(1/2, 'picas')), color = "grey30") +
     geom_vline(aes(xintercept = 0), linetype = "solid", colour="grey") +
     geom_hline(aes(yintercept = 0), linetype = "solid", colour="grey") +
@@ -378,22 +373,28 @@ par(mar=c(2,2,1,1), mgp=c(1.2,.5,0))
   
   nmds_plt <- ggplot(nmds_tbl, aes(NMDS1,NMDS2, label=labels, colour=time)) + 
     xlab("NMDS1") + ylab("NMDS2") +
-    #coord_fixed() +
     geom_point(aes(shape = region), size=3) +
     stat_conf_ellipse(aes(x=NMDS1, y=NMDS2, color=time, type="norm")) +
     scale_colour_manual(values=c("#E69F00", "#999999")) +
     geom_text_repel(colour="black", size=3) +
     geom_vline(aes(xintercept = 0), linetype = "solid", colour="grey") +
     geom_hline(aes(yintercept = 0), linetype = "solid", colour="grey") +
-    theme_classic()
+    theme(legend.title = element_blank(), 
+          legend.text = element_text(size=9))
+
   
 
 
 #Plot Environmental fitting
   
+  #extract NMDS vectors scores
   spp.scrs <- as.data.frame(scores(fit, display = "vectors"))
-  spp.scrs <- cbind(spp.scrs, Species = rownames(spp.scrs))
   
+  #create data frame with statistically significant variables from envfit
+  spp.scrs <- cbind(spp.scrs, Species = rownames(spp.scrs), sng=fit[["vectors"]][["pvals"]])
+  spp.scrs <- filter(spp.scrs, sng<0.05)
+  
+
   envfit_plt <- ggplot(data.frame(scrs)) +
     xlab("NMDS1") + ylab("NMDS2") +
     geom_point(data = selected_spp_scrs, aes(x=NMDS1, y=NMDS2)) +
@@ -418,11 +419,9 @@ par(mar=c(2,2,1,1), mgp=c(1.2,.5,0))
             theme(legend.title=element_blank())
   
   final_plt
-  ggsave("diatom-gamls-model-fits-composite.pdf", plotAll, height = 8, width = 10)
+  ggsave("plot.pdf", final_plt)
   
-                  
-                  
- 
+
 
 #######################
 ### SIMPER analysis ###
