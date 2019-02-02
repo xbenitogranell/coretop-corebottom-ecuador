@@ -76,13 +76,13 @@ pairs(env_subset, diag.panel = panel.hist, upper.panel = panel.smooth, lower.pan
 cor <- corr.test(env_subset, method = "spearman")
 
   #export correlation p values
-  cor.table <- cor$r
-  write.csv(cor.table, "cor.r.csv")
+  cor.table <- cor$p
+  write.csv(cor.table, "cor.p.csv")
   
 
 #Select variables with r Pearson <0.85
 env_subset<- env_transformed[, which(names(env_data) %in% c("WaterT", "pH", "Cond", "Secchi", "Ca", "Mg", "K", "NO3", "SO4", "TN", "TP",
-                                                            "MaxDepth", "Elevation", "lake.area",
+                                                            "MaxDepth", "Elevation", "lake.area", 
                                                              "P.season", "MAP", "T.season"))]
 
   
