@@ -6,7 +6,7 @@ library(vegan) #to perform nonmetric multidimensional analysis, simper and adoni
 library(ade4) #to perfom PCA analysis
 library(ggplot2) #to make nice ordination plots
 library(cowplot) #to plot differents ggplots objects in the same grid
-library(ggrepel) #
+library(ggrepel) # to repel overlapping text in ggplots
 library(ggpubr) #to draw ellipses
 library(goeveg) #allow to select species for vegan ordination objects
 library(tidyverse) #allow to manipulate tabulate data
@@ -15,6 +15,7 @@ library(sp) #dependencies for spacemakeR
 library(spdep) #dependencies for spacemakeR
 library(adespatial) #dependencies for spacemakeR
 library(scales) #allow to scale variables from 0 to 1 
+library(psych) #correlation tests
 
 
 ######################################
