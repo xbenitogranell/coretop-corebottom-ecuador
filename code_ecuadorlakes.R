@@ -13,7 +13,7 @@ library(tidyverse) #allow to manipulate tabulate data
 library(spacemakeR) #allow to compute distance-based Moran eigenvectors. Installed using install.packages("spacemakeR", repos="http://R-Forge.R-project.org")
 library(sp) #dependencies for spacemakeR
 library(spdep) #dependencies for spacemakeR
-library(adespatial) #dependencies for spacemakeR
+library(adespatial) #dependencies for spacemakeR and forward selection procedure
 library(scales) #allow to scale variables from 0 to 1 
 library(psych) #correlation tests
 
