@@ -1,5 +1,5 @@
 #Set WD
-getwd("~/myfolder")
+getwd("~data")
 
 ##loading libraries for functions used
 library(vegan) #to perform nonmetric multidimensional analysis, simper and adonis2 
