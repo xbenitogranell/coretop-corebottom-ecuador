@@ -273,7 +273,7 @@ text(mod1, dis="bp", col="grey")
 labels <- c("YAH", "YBO", "SPA", "CUN", "CUI", "LLA", "COL", "DCH", "HUA", "CHI", "CAR", "CUB", "EST", "YAN", "MAR", "JIG", "RIN", "FON", "PIC")
 text(scrs.region[,1:2], labels = labels, pos = 2, cex = 0.8, offset = 0.3)
 
-legend("bottomleft", legend=c("High-elevation Andes", "Inter Andean plateau"), pch=c(21,24), bg="black", col = "black", cex=0.9)
+legend("bottomleft", legend=c("High-elevation Andes", "Inter Andean plateau"), pch=c(21,24), col = "black", cex=0.9)
 
 
 #RDA environmental
